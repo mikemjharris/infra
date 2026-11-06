@@ -1,0 +1,209 @@
+name: Terraform
+
+# Pull requests: plan each web layer the PR changes and post it as a comment.
+# Merges to main: apply those layers, in the production environment, after
+# checking the commit is the merge of a pull request.
+# Weekly: plan every web layer, and fail if anything has drifted.
+#
+# terraform/org runs against the management account and is applied by hand
+# (bin/terraform); the roles here can't reach it.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1' # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  TF_VERSION: 1.17.1
+  AWS_REGION: eu-west-2
+  PLAN_ROLE_ARN: arn:aws:iam::702167621683:role/github-infra-plan
+  APPLY_ROLE_ARN: arn:aws:iam::702167621683:role/github-infra-apply
+
+jobs:
+  layers:
+    name: Changed layers
+    runs-on: ubuntu-latest
+    outputs:
+      layers: ${{ steps.layers.outputs.layers }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: layers
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          # In apply order.
+          all="web/bootstrap web/dns web/sites"
+          case "$EVENT" in
+            pull_request) changed=$(git diff --name-only "$BASE_SHA" HEAD) ;;
+            push)
+              if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = 0000000000000000000000000000000000000000 ]; then
+                changed=terraform/web/
+              else
+                changed=$(git diff --name-only "$BEFORE_SHA" HEAD)
+              fi ;;
+            *) changed=terraform/web/ ;;
+          esac
+          selected=""
+          for layer in $all; do
+            if echo "$changed" | grep -qE "^(terraform/$layer/|\.github/workflows/terraform\.yml$|bin/terraform$)" \
+              || { [ "$layer" = web/sites ] && echo "$changed" | grep -q '^terraform/modules/'; } \
+              || [ "$changed" = terraform/web/ ]; then
+              selected="$selected $layer"
+            fi
+          done
+          # shellcheck disable=SC2086 # split the list into one layer per line
+          json=$(printf '%s\n' $selected | jq -R . | jq -sc 'map(select(. != ""))')
+          echo "layers=$json" >> "$GITHUB_OUTPUT"
+          echo "Layers: $json"
+
+  plan:
+    name: Plan ${{ matrix.layer }}
+    if: github.event_name != 'push' && needs.layers.outputs.layers != '[]'
+    needs: layers
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # OIDC login to AWS; no AWS keys are stored in GitHub
+      pull-requests: write # the plan comment
+    strategy:
+      fail-fast: false
+      matrix:
+        layer: ${{ fromJSON(needs.layers.outputs.layers) }}
+    defaults:
+      run:
+        working-directory: terraform/${{ matrix.layer }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ env.PLAN_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - run: terraform init -input=false -no-color
+
+      - name: Plan
+        id: plan
+        run: |
+          set +e
+          terraform plan -input=false -no-color -lock-timeout=120s -detailed-exitcode > plan.txt 2>&1
+          code=$?
+          set -e
+          cat plan.txt
+          echo "exitcode=$code" >> "$GITHUB_OUTPUT"
+          # 0 = no changes, 2 = changes, anything else = error.
+          [ "$code" = 0 ] || [ "$code" = 2 ]
+
+      - name: Comment the plan on the pull request
+        if: github.event_name == 'pull_request' && always() && steps.plan.outcome != 'skipped'
+        uses: actions/github-script@v9
+        env:
+          LAYER: ${{ matrix.layer }}
+          OUTCOME: ${{ steps.plan.outcome }}
+        with:
+          retries: 3 # GitHub's API occasionally returns 5xx
+          script: |
+            const fs = require('fs');
+            const layer = process.env.LAYER;
+            const marker = `<!-- terraform-plan:${layer} -->`;
+            let plan = fs.readFileSync(`terraform/${layer}/plan.txt`, 'utf8');
+            const summary = (plan.match(/^(Plan: .*|No changes\..*)$/m) || ['(see the log)'])[0];
+            if (plan.length > 60000) plan = '…\n' + plan.slice(-60000);
+            const status = process.env.OUTCOME === 'success' ? '' : ' ❌ plan failed';
+            const body = `${marker}\n### \`${layer}\`: ${summary}${status}\n\n<details><summary>Plan</summary>\n\n\`\`\`\n${plan}\n\`\`\`\n</details>`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const existing = comments.find((c) => c.body.startsWith(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+
+      - name: Fail on drift
+        if: github.event_name == 'schedule' && steps.plan.outputs.exitcode == '2'
+        run: |
+          echo "::error::${{ matrix.layer }} has drifted from main: something was changed outside Terraform."
+          exit 1
+
+  # A single, always-reported check for branch protection, however many
+  # layers ran (including none).
+  plan-ok:
+    name: Terraform plan
+    if: always() && github.event_name != 'push'
+    needs: [layers, plan]
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "layers: ${{ needs.layers.result }}, plan: ${{ needs.plan.result }}"
+          [ "${{ needs.layers.result }}" = success ]
+          case "${{ needs.plan.result }}" in success|skipped) ;; *) exit 1 ;; esac
+
+  apply:
+    name: Apply ${{ matrix.layer }}
+    if: github.event_name == 'push' && needs.layers.outputs.layers != '[]'
+    needs: layers
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write # OIDC login to AWS; no AWS keys are stored in GitHub
+      pull-requests: read # the merge check
+    concurrency:
+      group: terraform-apply
+      cancel-in-progress: false
+    strategy:
+      max-parallel: 1 # bootstrap, then dns, then sites
+      matrix:
+        layer: ${{ fromJSON(needs.layers.outputs.layers) }}
+    defaults:
+      run:
+        working-directory: terraform/${{ matrix.layer }}
+    steps:
+      - name: Only apply merged pull requests
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pr=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" \
+            --jq '[.[] | select(.merged_at != null and .merge_commit_sha == "${{ github.sha }}")][0].number')
+          if [ -z "$pr" ]; then
+            echo "::error::${{ github.sha }} wasn't merged from a pull request; open a PR so the plan gets reviewed."
+            exit 1
+          fi
+          echo "Applying the merge of PR #$pr"
+
+      - uses: actions/checkout@v7
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ env.APPLY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - run: terraform init -input=false -no-color
+
+      - run: terraform plan -input=false -no-color -lock-timeout=120s -out=tfplan
+
+      - run: terraform apply -input=false -no-color -lock-timeout=120s tfplan
