@@ -21,9 +21,9 @@ module "www" {
 
   not_found_page = "/404.html"
 
-  # Still served by the droplet (web/dns). Cut over by removing www and the
-  # apex from web/dns and setting this true.
-  serve_dns = false
+  # Cut over from the droplet 2026-11-06: these records replaced the
+  # droplet's in place; web/dns no longer manages www or the apex.
+  serve_dns = true
 
   github_repo              = "mikemjharris/personal-website"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
