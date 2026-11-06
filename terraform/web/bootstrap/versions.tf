@@ -10,12 +10,12 @@ terraform {
 
   # The bucket is created by this layer (state.tf). On a fresh setup, comment
   # this out for the first apply, then uncomment and `terraform init -migrate-state`.
-  # backend "s3" {
-  #   bucket       = "mikemjharris-tfstate-702167621683"
-  #   key          = "web/bootstrap/terraform.tfstate"
-  #   region       = "eu-west-2"
-  #   use_lockfile = true
-  # }
+  backend "s3" {
+    bucket       = "mikemjharris-tfstate-702167621683"
+    key          = "web/bootstrap/terraform.tfstate"
+    region       = "eu-west-2"
+    use_lockfile = true
+  }
 }
 
 provider "aws" {
