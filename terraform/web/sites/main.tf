@@ -41,8 +41,9 @@ module "blog" {
   domain_names = ["blog.${var.domain}"]
   zone_id      = data.aws_route53_zone.main.zone_id
 
-  # Set once the first image is pushed; later deploys come from the blog repo.
-  image_uri = ""
+  # The first image, pushed by hand. Later deploys come from the blog repo
+  # and Terraform ignores them.
+  image_uri = "702167621683.dkr.ecr.eu-west-2.amazonaws.com/blog:803e6dd32a12b4d28373362e9b9afed1bfb35571"
 
   environment = {
     NODE_ENV = "production"
