@@ -20,8 +20,7 @@ resource "aws_route53_zone" "main" {
   }
 }
 
-# Only certificate authorities used here may issue for the domain: Amazon
-# (ACM, for CloudFront) and Let's Encrypt (the droplet, until it's retired).
+# Only Amazon (ACM, for CloudFront) may issue certificates for the domain.
 resource "aws_route53_record" "caa" {
   zone_id = aws_route53_zone.main.zone_id
   name    = var.domain
@@ -29,7 +28,6 @@ resource "aws_route53_record" "caa" {
   ttl     = 3600
   records = [
     "0 issue \"amazon.com\"",
-    "0 issue \"letsencrypt.org\"",
     "0 issuewild \";\"",
   ]
 }
