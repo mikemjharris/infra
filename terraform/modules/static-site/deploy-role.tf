@@ -1,5 +1,5 @@
 # Lets the site's own repo upload content and clear the cache, and nothing
-# else, from GitHub Actions on its main branch.
+# else, from GitHub Actions on its main branch (github_branches).
 
 data "aws_iam_policy_document" "deploy_trust" {
   count = var.github_repo != "" ? 1 : 0
@@ -21,7 +21,7 @@ data "aws_iam_policy_document" "deploy_trust" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:ref:refs/heads/${var.github_branch}"]
+      values   = [for b in var.github_branches : "repo:${var.github_repo}:ref:refs/heads/${b}"]
     }
   }
 }

@@ -33,9 +33,10 @@ variable "github_repo" {
   default     = ""
 }
 
-variable "github_branch" {
-  type    = string
-  default = "master"
+variable "github_branches" {
+  description = "Branches of github_repo whose GitHub Actions may deploy."
+  type        = list(string)
+  default     = ["main"]
 }
 
 variable "github_oidc_provider_arn" {
