@@ -1,0 +1,34 @@
+terraform {
+  required_version = ">= 1.10"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
+    }
+  }
+
+  # State starts local: the bucket that holds it is created by this layer.
+  # After the first apply, uncomment this and run `terraform init -migrate-state`.
+  # backend "s3" {
+  #   bucket       = "mikemjharris-tfstate-244971309341"
+  #   key          = "org/terraform.tfstate"
+  #   region       = "eu-west-2"
+  #   use_lockfile = true
+  # }
+}
+
+provider "aws" {
+  region = "eu-west-2"
+
+  # Guard against running this layer with credentials for the wrong account.
+  allowed_account_ids = [var.management_account_id]
+
+  default_tags {
+    tags = {
+      ManagedBy = "terraform"
+      Repo      = "mikemjharris/infra"
+      Layer     = "org"
+    }
+  }
+}

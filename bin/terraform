@@ -2,17 +2,19 @@
 # Runs Terraform from the official Docker image, so the version is pinned here
 # rather than whatever is installed on the machine.
 #
-#   bin/terraform plan                      (from any folder in the repo)
-#   AWS_PROFILE=other bin/terraform plan    (default profile: personal)
-#   TF_VERSION=1.18.0 bin/terraform version (try another version)
+#   cd terraform/org && ../../bin/terraform plan
+#   aws-vault exec management -- bin/terraform plan   (credentials from aws-vault)
+#   TF_VERSION=1.18.0 bin/terraform version           (try another version)
 #
-# AWS credentials come from the AWS CLI on the host (`aws login`, SSO or a
-# profile) and are passed in as short-lived environment variables. ~/.aws is
-# not mounted into the container.
+# AWS credentials, in order:
+#   1. already in the environment (aws-vault exec, CI), used as they are;
+#   2. otherwise the AWS CLI profile in AWS_PROFILE, or named in the nearest
+#      `.aws-profile` file at or above the current folder (one per layer),
+#      exported as short-lived environment variables (`aws sso login` first).
+# ~/.aws is never mounted into the container.
 set -euo pipefail
 
 TF_VERSION="${TF_VERSION:-1.17.1}"
-AWS_PROFILE="${AWS_PROFILE:-personal}"
 
 repo_root="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 rel_dir="$(realpath --relative-to="$repo_root" "$PWD")"
@@ -23,16 +25,32 @@ esac
 plugin_cache="${XDG_CACHE_HOME:-$HOME/.cache}/terraform-plugins"
 mkdir -p "$plugin_cache"
 
+find_profile() {
+  local dir="$PWD"
+  while [[ "$dir" == "$repo_root"* ]]; do
+    if [[ -f "$dir/.aws-profile" ]]; then
+      tr -d '[:space:]' < "$dir/.aws-profile"
+      return
+    fi
+    dir="$(dirname "$dir")"
+  done
+}
+
 # Only commands that talk to AWS need credentials; fmt, validate and version
 # work without them.
-if creds="$(aws configure export-credentials --profile "$AWS_PROFILE" --format env-no-export 2>/dev/null)"; then
-  while IFS='=' read -r key value; do
-    [[ -n "$key" ]] && export "$key=$value"
-  done <<< "$creds"
-  export AWS_REGION="${AWS_REGION:-eu-west-2}"
-else
-  echo "bin/terraform: no AWS credentials for profile '$AWS_PROFILE' (try: aws login --profile $AWS_PROFILE)" >&2
+if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
+  profile="${AWS_PROFILE:-$(find_profile)}"
+  if [[ -z "$profile" ]]; then
+    echo "bin/terraform: no AWS profile (set AWS_PROFILE or add a .aws-profile file)" >&2
+  elif creds="$(aws configure export-credentials --profile "$profile" --format env-no-export 2>/dev/null)"; then
+    while IFS='=' read -r key value; do
+      [[ -n "$key" ]] && export "$key=$value"
+    done <<< "$creds"
+  else
+    echo "bin/terraform: no AWS credentials for profile '$profile' (try: aws sso login --profile $profile)" >&2
+  fi
 fi
+export AWS_REGION="${AWS_REGION:-eu-west-2}"
 
 tty_flags=()
 [[ -t 0 && -t 1 ]] && tty_flags=(-it)
