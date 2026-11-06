@@ -59,7 +59,8 @@ resource "aws_lambda_function" "site" {
   depends_on = [aws_iam_role_policy_attachment.function_logs]
 }
 
-# Only CloudFront uses this address; it isn't published anywhere.
+# Only CloudFront uses this address; it isn't published anywhere. Creating a
+# NONE-auth URL also adds the lambda:InvokeFunctionUrl permission itself.
 resource "aws_lambda_function_url" "site" {
   count = local.enabled ? 1 : 0
 
@@ -67,23 +68,16 @@ resource "aws_lambda_function_url" "site" {
   authorization_type = "NONE"
 }
 
-resource "aws_lambda_permission" "url" {
-  count = local.enabled ? 1 : 0
-
-  statement_id           = "FunctionURLAllowPublicAccess"
-  action                 = "lambda:InvokeFunctionUrl"
-  function_name          = aws_lambda_function.site[0].function_name
-  principal              = "*"
-  function_url_auth_type = "NONE"
-}
-
+# Public URLs also need lambda:InvokeFunction, limited to calls arriving
+# through the URL so the function can't be invoked directly.
 resource "aws_lambda_permission" "url_invoke" {
   count = local.enabled ? 1 : 0
 
-  statement_id  = "FunctionURLAllowInvokeAction"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.site[0].function_name
-  principal     = "*"
+  statement_id             = "FunctionURLAllowInvokeAction"
+  action                   = "lambda:InvokeFunction"
+  function_name            = aws_lambda_function.site[0].function_name
+  principal                = "*"
+  invoked_via_function_url = true
 }
 
 locals {
