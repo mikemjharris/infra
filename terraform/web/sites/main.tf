@@ -44,8 +44,9 @@ module "books" {
   zone_id      = data.aws_route53_zone.main.zone_id
   bucket_name  = "mikemjharris-books-${var.web_account_id}"
 
-  # Still served by the droplet (web/dns).
-  serve_dns = false
+  # Cut over from the droplet: the alias records replace web/dns's A record
+  # in place.
+  serve_dns = true
 
   github_repo              = "mikemjharris/books"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
