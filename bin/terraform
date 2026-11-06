@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Runs Terraform from the official Docker image, so the version is pinned here
+# rather than whatever is installed on the machine.
+#
+#   bin/terraform plan                      (from any folder in the repo)
+#   AWS_PROFILE=other bin/terraform plan    (default profile: personal)
+#   TF_VERSION=1.18.0 bin/terraform version (try another version)
+#
+# AWS credentials come from the AWS CLI on the host (`aws login`, SSO or a
+# profile) and are passed in as short-lived environment variables. ~/.aws is
+# not mounted into the container.
+set -euo pipefail
+
+TF_VERSION="${TF_VERSION:-1.17.1}"
+AWS_PROFILE="${AWS_PROFILE:-personal}"
+
+repo_root="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
+rel_dir="$(realpath --relative-to="$repo_root" "$PWD")"
+case "$rel_dir" in
+  ..*) echo "bin/terraform: run it from inside $repo_root" >&2; exit 1 ;;
+esac
+
+plugin_cache="${XDG_CACHE_HOME:-$HOME/.cache}/terraform-plugins"
+mkdir -p "$plugin_cache"
+
+# Only commands that talk to AWS need credentials; fmt, validate and version
+# work without them.
+if creds="$(aws configure export-credentials --profile "$AWS_PROFILE" --format env-no-export 2>/dev/null)"; then
+  while IFS='=' read -r key value; do
+    [[ -n "$key" ]] && export "$key=$value"
+  done <<< "$creds"
+  export AWS_REGION="${AWS_REGION:-eu-west-2}"
+else
+  echo "bin/terraform: no AWS credentials for profile '$AWS_PROFILE' (try: aws login --profile $AWS_PROFILE)" >&2
+fi
+
+tty_flags=()
+[[ -t 0 && -t 1 ]] && tty_flags=(-it)
+
+exec docker run --rm "${tty_flags[@]}" \
+  --user "$(id -u):$(id -g)" \
+  -e HOME=/tmp \
+  -e TF_PLUGIN_CACHE_DIR=/plugin-cache \
+  -e TF_IN_AUTOMATION \
+  -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN \
+  -e AWS_CREDENTIAL_EXPIRATION -e AWS_REGION \
+  -v "$repo_root:/workspace" \
+  -v "$plugin_cache:/plugin-cache" \
+  -w "/workspace/$rel_dir" \
+  "hashicorp/terraform:$TF_VERSION" "$@"
