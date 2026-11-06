@@ -117,6 +117,7 @@ jobs:
           LAYER: ${{ matrix.layer }}
           OUTCOME: ${{ steps.plan.outcome }}
         with:
+          retries: 3 # GitHub's API occasionally returns 5xx
           script: |
             const fs = require('fs');
             const layer = process.env.LAYER;
