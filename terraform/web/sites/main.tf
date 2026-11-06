@@ -66,15 +66,16 @@ module "snowman" {
   zone_id      = data.aws_route53_zone.main.zone_id
   bucket_name  = "mikemjharris-snowman-${var.web_account_id}"
 
-  # Still served by the droplet (web/dns).
-  serve_dns = false
+  # Cut over from the droplet: the alias records replace web/dns's A record
+  # in place.
+  serve_dns = true
 
   github_repo              = "mikemjharris/threejs-snowman"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
 }
 
-# animated-message.mikemjharris.com: the SVG animated message, static. Has no
-# DNS record yet (it was down); serve_dns goes on once there's content.
+# animated-message.mikemjharris.com: the SVG animated message, static. It had
+# no DNS record (it was down), so its records are new.
 module "animated_message" {
   source = "../../modules/static-site"
   providers = {
@@ -87,7 +88,7 @@ module "animated_message" {
   zone_id      = data.aws_route53_zone.main.zone_id
   bucket_name  = "mikemjharris-animated-message-${var.web_account_id}"
 
-  serve_dns = false
+  serve_dns = true
 
   github_repo              = "mikemjharris/svg-animation-with-node-server"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn

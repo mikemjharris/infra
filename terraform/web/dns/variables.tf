@@ -25,7 +25,7 @@ variable "droplet_hosts" {
     are not carried over.
   EOT
   type        = set(string)
-  default     = ["snowman", "webhook"]
+  default     = ["webhook"]
 }
 
 variable "droplet_serves_apex" {
