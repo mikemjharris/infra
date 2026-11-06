@@ -52,8 +52,9 @@ module "blog" {
   static_paths   = ["/dist/*", "/images/*", "/stylesheets/*", "/favicon.ico"]
   uncached_paths = ["/mcp", "/mcp/*"]
 
-  # Still served by the droplet (web/dns).
-  serve_dns = false
+  # Cut over from the droplet: the alias records replace web/dns's A record
+  # in place.
+  serve_dns = true
 
   github_repo              = "mikemjharris/blog"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
