@@ -57,6 +57,17 @@ resource "aws_cloudfront_distribution" "site" {
     }
   }
 
+  dynamic "custom_error_response" {
+    for_each = var.not_found_page != "" ? [var.not_found_page] : []
+
+    content {
+      error_code            = 404
+      response_code         = 404
+      response_page_path    = custom_error_response.value
+      error_caching_min_ttl = 60
+    }
+  }
+
   restrictions {
     geo_restriction {
       restriction_type = "none"

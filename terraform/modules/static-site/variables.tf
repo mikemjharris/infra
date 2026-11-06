@@ -42,3 +42,9 @@ variable "github_oidc_provider_arn" {
   type    = string
   default = ""
 }
+
+variable "not_found_page" {
+  description = "Path of the page shown for missing files, e.g. /404.html. Empty: S3's own error."
+  type        = string
+  default     = ""
+}

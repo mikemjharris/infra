@@ -19,6 +19,8 @@ module "www" {
   zone_id      = data.aws_route53_zone.main.zone_id
   bucket_name  = "mikemjharris-www-${var.web_account_id}"
 
+  not_found_page = "/404.html"
+
   # Still served by the droplet (web/dns). Cut over by removing www and the
   # apex from web/dns and setting this true.
   serve_dns = false
