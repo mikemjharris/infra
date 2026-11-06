@@ -28,8 +28,6 @@ module "www" {
 
   github_repo              = "mikemjharris/personal-website"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
-  # Both while the repos move from master to main.
-  github_branches = ["master", "main"]
 }
 
 # books.mikemjharris.com: a static React app that reads a published Google
@@ -52,8 +50,6 @@ module "books" {
 
   github_repo              = "mikemjharris/books"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
-  # Both while the repos move from master to main.
-  github_branches = ["master", "main"]
 }
 
 # snowman.mikemjharris.com: the three.js snowball game, static, high scores
@@ -76,8 +72,6 @@ module "snowman" {
 
   github_repo              = "mikemjharris/threejs-snowman"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
-  # Both while the repos move from master to main.
-  github_branches = ["master", "main"]
 }
 
 # animated-message.mikemjharris.com: the SVG animated message, static. It had
@@ -98,8 +92,6 @@ module "animated_message" {
 
   github_repo              = "mikemjharris/svg-animation-with-node-server"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
-  # Both while the repos move from master to main.
-  github_branches = ["master", "main"]
 }
 
 # blog.mikemjharris.com: the Express app from mikemjharris/blog on Lambda.
@@ -131,6 +123,4 @@ module "blog" {
 
   github_repo              = "mikemjharris/blog"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
-  # Both while the repos move from master to main.
-  github_branches = ["master", "main"]
 }
