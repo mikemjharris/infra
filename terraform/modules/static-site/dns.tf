@@ -1,8 +1,9 @@
 # Points the hostnames at CloudFront once serve_dns is on. allow_overwrite
 # replaces any existing record of the same name and type in one Route 53
 # update (UPSERT), so taking over a name from the old server has no gap.
-# The zone apex can't be a CNAME, so it gets A/AAAA aliases; other names get
-# a CNAME, which also overwrites an existing CNAME in place.
+# Names get A/AAAA aliases (the apex can't be a CNAME, and an alias A replaces
+# an existing A record in place); subdomain_cname keeps a subdomain's existing
+# CNAME instead, as www has.
 
 data "aws_route53_zone" "this" {
   zone_id = var.zone_id
@@ -12,7 +13,10 @@ locals {
   apex_names = [for d in var.domain_names : d if d == trimsuffix(data.aws_route53_zone.this.name, ".")]
   sub_names  = [for d in var.domain_names : d if !contains(local.apex_names, d)]
 
-  alias_records = var.serve_dns ? toset(flatten([for d in local.apex_names : ["${d}|A", "${d}|AAAA"]])) : toset([])
+  alias_names = var.subdomain_cname ? local.apex_names : var.domain_names
+  cname_names = var.subdomain_cname ? local.sub_names : []
+
+  alias_records = var.serve_dns ? toset(flatten([for d in local.alias_names : ["${d}|A", "${d}|AAAA"]])) : toset([])
 }
 
 resource "aws_route53_record" "apex" {
@@ -31,7 +35,7 @@ resource "aws_route53_record" "apex" {
 }
 
 resource "aws_route53_record" "sub" {
-  for_each = var.serve_dns ? toset(local.sub_names) : toset([])
+  for_each = var.serve_dns ? toset(local.cname_names) : toset([])
 
   zone_id         = var.zone_id
   name            = each.key

@@ -48,3 +48,12 @@ variable "not_found_page" {
   type        = string
   default     = ""
 }
+
+variable "subdomain_cname" {
+  description = <<-EOT
+    Use a CNAME for non-apex names (only to keep an existing one, as www has);
+    otherwise A/AAAA aliases, which can replace an existing A record in place.
+  EOT
+  type        = bool
+  default     = false
+}

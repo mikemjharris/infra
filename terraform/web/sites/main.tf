@@ -19,13 +19,35 @@ module "www" {
   zone_id      = data.aws_route53_zone.main.zone_id
   bucket_name  = "mikemjharris-www-${var.web_account_id}"
 
-  not_found_page = "/404.html"
+  not_found_page  = "/404.html"
+  subdomain_cname = true
 
   # Cut over from the droplet 2026-11-06: these records replaced the
   # droplet's in place; web/dns no longer manages www or the apex.
   serve_dns = true
 
   github_repo              = "mikemjharris/personal-website"
+  github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
+}
+
+# books.mikemjharris.com: a static React app that reads a published Google
+# Sheet in the browser.
+module "books" {
+  source = "../../modules/static-site"
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  name         = "books"
+  domain_names = ["books.${var.domain}"]
+  zone_id      = data.aws_route53_zone.main.zone_id
+  bucket_name  = "mikemjharris-books-${var.web_account_id}"
+
+  # Still served by the droplet (web/dns).
+  serve_dns = false
+
+  github_repo              = "mikemjharris/books"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
 }
 

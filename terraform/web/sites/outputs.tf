@@ -5,3 +5,7 @@ output "www" {
 output "blog" {
   value = module.blog
 }
+
+output "books" {
+  value = module.books
+}
