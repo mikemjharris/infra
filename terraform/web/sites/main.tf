@@ -52,6 +52,47 @@ module "books" {
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
 }
 
+# snowman.mikemjharris.com: the three.js snowball game, static, high scores
+# kept in the player's browser.
+module "snowman" {
+  source = "../../modules/static-site"
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  name         = "snowman"
+  domain_names = ["snowman.${var.domain}"]
+  zone_id      = data.aws_route53_zone.main.zone_id
+  bucket_name  = "mikemjharris-snowman-${var.web_account_id}"
+
+  # Still served by the droplet (web/dns).
+  serve_dns = false
+
+  github_repo              = "mikemjharris/threejs-snowman"
+  github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
+}
+
+# animated-message.mikemjharris.com: the SVG animated message, static. Has no
+# DNS record yet (it was down); serve_dns goes on once there's content.
+module "animated_message" {
+  source = "../../modules/static-site"
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+
+  name         = "animated-message"
+  domain_names = ["animated-message.${var.domain}"]
+  zone_id      = data.aws_route53_zone.main.zone_id
+  bucket_name  = "mikemjharris-animated-message-${var.web_account_id}"
+
+  serve_dns = false
+
+  github_repo              = "mikemjharris/svg-animation-with-node-server"
+  github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
+}
+
 # blog.mikemjharris.com: the Express app from mikemjharris/blog on Lambda.
 module "blog" {
   source = "../../modules/lambda-site"
