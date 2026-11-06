@@ -12,12 +12,14 @@ resource "aws_route53_record" "droplet_apex" {
   records = [var.droplet_ip]
 }
 
+# A records straight to the droplet, not CNAMEs to the apex: the apex now
+# points at CloudFront.
 resource "aws_route53_record" "droplet_hosts" {
   for_each = var.droplet_hosts
 
   zone_id = aws_route53_zone.main.zone_id
   name    = "${each.key}.${var.domain}"
-  type    = "CNAME"
+  type    = "A"
   ttl     = 300
-  records = [var.domain]
+  records = [var.droplet_ip]
 }
