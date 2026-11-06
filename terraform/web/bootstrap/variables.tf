@@ -14,3 +14,16 @@ variable "infra_repo" {
   type        = string
   default     = "infra"
 }
+
+# New repos get "immutable" OIDC subjects that include the numeric owner and
+# repo IDs (repo:owner@ID/name@ID:...), so a deleted and recreated repo with
+# the same name can't assume these roles.
+variable "github_owner_id" {
+  type    = string
+  default = "1722189"
+}
+
+variable "infra_repo_id" {
+  type    = string
+  default = "1448656832"
+}

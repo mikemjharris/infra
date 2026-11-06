@@ -9,6 +9,8 @@ resource "aws_iam_openid_connect_provider" "github" {
 
 locals {
   infra_repo = "${var.github_owner}/${var.infra_repo}"
+  # The OIDC subject prefix for this repo (immutable form, with IDs).
+  infra_sub = "repo:${var.github_owner}@${var.github_owner_id}/${var.infra_repo}@${var.infra_repo_id}"
 }
 
 # --- plan: read-only, for pull requests and scheduled drift checks ---------
@@ -32,8 +34,8 @@ data "aws_iam_policy_document" "infra_plan_trust" {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:${local.infra_repo}:pull_request",
-        "repo:${local.infra_repo}:ref:refs/heads/main",
+        "${local.infra_sub}:pull_request",
+        "${local.infra_sub}:ref:refs/heads/main",
       ]
     }
   }
@@ -96,7 +98,7 @@ data "aws_iam_policy_document" "infra_apply_trust" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${local.infra_repo}:environment:production"]
+      values   = ["${local.infra_sub}:environment:production"]
     }
   }
 }
