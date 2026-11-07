@@ -77,3 +77,8 @@ variable "github_oidc_provider_arn" {
   type    = string
   default = ""
 }
+
+variable "version_json_headers_policy_id" {
+  description = "Response headers policy for /version.json, with the CORS header the dashboard needs."
+  type        = string
+}
