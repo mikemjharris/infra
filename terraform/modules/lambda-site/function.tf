@@ -50,7 +50,10 @@ resource "aws_lambda_function" "site" {
   timeout       = var.timeout_seconds
 
   environment {
-    variables = var.environment
+    variables = merge(
+      var.environment,
+      var.enforce_origin_verify ? { ORIGIN_VERIFY_SECRET = random_password.origin_verify.result } : {},
+    )
   }
 
   logging_config {
