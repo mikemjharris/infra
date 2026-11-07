@@ -15,7 +15,6 @@ on Lambda, DNS in Route 53. Each site's own repo deploys its content with GitHub
 | `terraform/web/bootstrap` | web | applied | state bucket, GitHub OIDC provider, `github-infra-plan` / `github-infra-apply` roles |
 | `terraform/web/dns` | web | applied, live | Route 53 zone (fixed nameservers), mail records, records for sites still on the droplet |
 | `terraform/web/sites` | web | applied, live | www, blog (Lambda), books, snowman, animated-message |
-| `terraform/web/backups` | web | new | encrypted off-site backups of the Home Assistant server: private versioned bucket (90 days), upload-only `homeassistant-backup` user |
 | `terraform/github` | GitHub (state in web) | applied | the site repos and `config`: rebase-only merges, secret scanning, rules on `main` (PR, CI checks, linear history), infra's `production` environment |
 
 Each folder's `.aws-profile` names the AWS CLI profile `bin/terraform` uses there.
