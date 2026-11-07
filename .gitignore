@@ -5,3 +5,4 @@
 *.tfplan
 crash.log
 terraform.tfvars
+.build/

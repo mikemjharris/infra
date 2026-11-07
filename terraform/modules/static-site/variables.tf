@@ -58,3 +58,21 @@ variable "subdomain_cname" {
   type        = bool
   default     = false
 }
+
+variable "api_domain_name" {
+  description = "Host of an HTTPS backend (e.g. a Lambda function URL) served at api_path_pattern. Empty: none."
+  type        = string
+  default     = ""
+}
+
+variable "api_path_pattern" {
+  type    = string
+  default = "/api/*"
+}
+
+variable "api_origin_verify_secret" {
+  description = "Sent to the backend as x-origin-verify, so it can refuse requests that skip CloudFront."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
