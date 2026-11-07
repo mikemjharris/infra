@@ -1,4 +1,4 @@
-# The site repos' settings and the rules on their main branches.
+# My active repos' settings and the rules on their main branches.
 #
 # Applied by hand (bin/terraform from this folder), like terraform/org: CI
 # would need a GitHub token with admin on every repo, which is more power than
@@ -44,6 +44,12 @@ locals {
       description = "Animated SVG message"
       homepage    = "https://animated-message.mikemjharris.com"
       checks      = ["build"]
+      strict      = false
+    }
+    config = {
+      description = "Config - command line setup etc."
+      homepage    = ""
+      checks      = ["Install test"]
       strict      = false
     }
     dashboard = {
