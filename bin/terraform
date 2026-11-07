@@ -52,6 +52,13 @@ if [[ -z "${AWS_ACCESS_KEY_ID:-}" ]]; then
 fi
 export AWS_REGION="${AWS_REGION:-eu-west-2}"
 
+# terraform/github manages the GitHub repos; it uses the GitHub CLI's login
+# unless GITHUB_TOKEN is already set.
+if [[ "$rel_dir" == terraform/github* && -z "${GITHUB_TOKEN:-}" ]] && command -v gh >/dev/null; then
+  GITHUB_TOKEN="$(gh auth token 2>/dev/null || true)"
+  export GITHUB_TOKEN
+fi
+
 tty_flags=()
 [[ -t 0 && -t 1 ]] && tty_flags=(-it)
 
@@ -62,6 +69,7 @@ exec docker run --rm "${tty_flags[@]}" \
   -e TF_IN_AUTOMATION \
   -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN \
   -e AWS_CREDENTIAL_EXPIRATION -e AWS_REGION \
+  -e GITHUB_TOKEN \
   -v "$repo_root:/workspace" \
   -v "$plugin_cache:/plugin-cache" \
   -w "/workspace/$rel_dir" \
