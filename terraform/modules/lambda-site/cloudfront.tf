@@ -8,7 +8,9 @@ locals {
 }
 
 # Pages: cached for page_cache_seconds even though the app sends max-age=0;
-# deploys clear the cache.
+# deploys clear the cache. Query strings still reach the app but aren't part
+# of the cache key, so ?anything=random can't force a fresh Lambda call each
+# time (the blog doesn't read them).
 resource "aws_cloudfront_cache_policy" "pages" {
   name        = "${var.name}-pages"
   min_ttl     = var.page_cache_seconds
@@ -26,7 +28,7 @@ resource "aws_cloudfront_cache_policy" "pages" {
       header_behavior = "none"
     }
     query_strings_config {
-      query_string_behavior = "all"
+      query_string_behavior = "none"
     }
   }
 }
