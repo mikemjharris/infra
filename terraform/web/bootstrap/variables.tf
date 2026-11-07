@@ -27,3 +27,13 @@ variable "infra_repo_id" {
   type    = string
   default = "1448656832"
 }
+
+variable "kill_switch_usd" {
+  description = <<-EOT
+    Monthly spend in this account at which every Lambda function here (the
+    blog, snowman scores, ...) is throttled to zero. Set below terraform/org's
+    web_freeze_usd.
+  EOT
+  type        = number
+  default     = 20
+}

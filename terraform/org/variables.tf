@@ -31,3 +31,25 @@ variable "allowed_regions" {
   type        = list(string)
   default     = ["eu-west-2", "eu-west-1", "us-east-1"]
 }
+
+variable "daily_budget_usd" {
+  description = "Spend in a single day, across the organisation, that triggers an alert."
+  type        = number
+  default     = 1
+}
+
+variable "web_freeze_usd" {
+  description = <<-EOF
+    Monthly spend in the web account at which AWS Budgets attaches the
+    web-freeze SCP to it, blocking every API call there. Set above web/bootstrap's
+    kill switch, which throttles the site functions first.
+  EOF
+  type        = number
+  default     = 25
+}
+
+variable "anomaly_alert_usd" {
+  description = "Cost Anomaly Detection emails about anomalies with at least this total impact."
+  type        = number
+  default     = 3
+}
