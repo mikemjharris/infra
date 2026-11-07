@@ -20,8 +20,9 @@ locals {
   origin_id = "s3-${var.name}"
 
   # AWS managed policies.
-  cache_policy_caching_optimized    = "658327ea-f89d-4fab-a63d-7e88639e58f6"
-  response_headers_security_headers = "67f7725c-6f97-4210-82d7-5512b31e9d03"
+  cache_policy_caching_optimized     = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+  response_headers_security_headers  = "67f7725c-6f97-4210-82d7-5512b31e9d03"
+  response_headers_cors_and_security = "e61eb60c-9c35-4d20-a928-2b84e02af89c"
 }
 
 resource "aws_cloudfront_distribution" "site" {
@@ -55,6 +56,19 @@ resource "aws_cloudfront_distribution" "site" {
       event_type   = "viewer-request"
       function_arn = aws_cloudfront_function.viewer_request.arn
     }
+  }
+
+  # version.json (commit and deploy time) can be read from any site, so the
+  # dashboard on www can show every site's.
+  ordered_cache_behavior {
+    path_pattern               = "/version.json"
+    target_origin_id           = local.origin_id
+    viewer_protocol_policy     = "redirect-to-https"
+    allowed_methods            = ["GET", "HEAD", "OPTIONS"]
+    cached_methods             = ["GET", "HEAD"]
+    compress                   = true
+    cache_policy_id            = local.cache_policy_caching_optimized
+    response_headers_policy_id = local.response_headers_cors_and_security
   }
 
   dynamic "custom_error_response" {

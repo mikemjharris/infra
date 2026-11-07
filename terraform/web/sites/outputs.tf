@@ -17,3 +17,7 @@ output "snowman" {
 output "animated_message" {
   value = module.animated_message
 }
+
+output "dashboard_deploy_role_arn" {
+  value = aws_iam_role.dashboard_deploy.arn
+}
