@@ -82,3 +82,13 @@ variable "version_json_headers_policy_id" {
   description = "Response headers policy for /version.json, with the CORS header the dashboard needs."
   type        = string
 }
+
+variable "enforce_origin_verify" {
+  description = <<-EOT
+    Give the app ORIGIN_VERIFY_SECRET, so it refuses requests without
+    CloudFront's x-origin-verify header. Turn on only once CloudFront is
+    already sending it (a separate, earlier apply).
+  EOT
+  type        = bool
+  default     = false
+}

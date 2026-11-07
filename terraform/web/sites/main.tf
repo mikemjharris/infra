@@ -127,6 +127,9 @@ module "blog" {
     NODE_ENV = "production"
   }
 
+  # The app answers only requests carrying CloudFront's secret header.
+  enforce_origin_verify = true
+
   static_paths   = ["/dist/*", "/images/*", "/stylesheets/*", "/favicon.ico"]
   uncached_paths = ["/mcp", "/mcp/*"]
 
