@@ -38,6 +38,8 @@ data "archive_file" "snowman_scores" {
   type        = "zip"
   source_file = "${path.module}/snowman-scores/index.mjs"
   output_path = "${path.module}/.build/snowman-scores.zip"
+  # Same zip, so same hash, wherever it is built (checkouts differ in modes).
+  output_file_mode = "0644"
 }
 
 data "aws_iam_policy_document" "snowman_scores_trust" {
