@@ -72,6 +72,13 @@ resource "aws_cloudfront_distribution" "site" {
     origin_id   = local.origin_id
     domain_name = local.function_url_host
 
+    # The app refuses requests without this (once enforce_origin_verify is
+    # on), so the function URL can't be used to skip CloudFront.
+    custom_header {
+      name  = "x-origin-verify"
+      value = random_password.origin_verify.result
+    }
+
     custom_origin_config {
       http_port              = 80
       https_port             = 443
