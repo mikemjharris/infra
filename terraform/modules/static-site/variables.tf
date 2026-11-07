@@ -76,3 +76,8 @@ variable "api_origin_verify_secret" {
   default     = ""
   sensitive   = true
 }
+
+variable "version_json_headers_policy_id" {
+  description = "Response headers policy for /version.json, with the CORS header the dashboard needs."
+  type        = string
+}

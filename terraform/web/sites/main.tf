@@ -28,6 +28,8 @@ module "www" {
 
   github_repo              = "mikemjharris/personal-website"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
+
+  version_json_headers_policy_id = aws_cloudfront_response_headers_policy.version_json.id
 }
 
 # books.mikemjharris.com: a static React app that reads a published Google
@@ -50,6 +52,8 @@ module "books" {
 
   github_repo              = "mikemjharris/books"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
+
+  version_json_headers_policy_id = aws_cloudfront_response_headers_policy.version_json.id
 }
 
 # snowman.mikemjharris.com: the three.js snowball game, static, with a shared
@@ -77,6 +81,8 @@ module "snowman" {
 
   github_repo              = "mikemjharris/threejs-snowman"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
+
+  version_json_headers_policy_id = aws_cloudfront_response_headers_policy.version_json.id
 }
 
 # animated-message.mikemjharris.com: the SVG animated message, static. It had
@@ -97,6 +103,8 @@ module "animated_message" {
 
   github_repo              = "mikemjharris/svg-animation-with-node-server"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
+
+  version_json_headers_policy_id = aws_cloudfront_response_headers_policy.version_json.id
 }
 
 # blog.mikemjharris.com: the Express app from mikemjharris/blog on Lambda.
@@ -128,4 +136,6 @@ module "blog" {
 
   github_repo              = "mikemjharris/blog"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
+
+  version_json_headers_policy_id = aws_cloudfront_response_headers_policy.version_json.id
 }

@@ -22,7 +22,6 @@ locals {
   # AWS managed policies.
   cache_policy_caching_optimized        = "658327ea-f89d-4fab-a63d-7e88639e58f6"
   response_headers_security_headers     = "67f7725c-6f97-4210-82d7-5512b31e9d03"
-  response_headers_cors_and_security    = "e61eb60c-9c35-4d20-a928-2b84e02af89c"
   cache_policy_caching_disabled         = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
   origin_request_all_viewer_except_host = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
 
@@ -93,7 +92,7 @@ resource "aws_cloudfront_distribution" "site" {
     cached_methods             = ["GET", "HEAD"]
     compress                   = true
     cache_policy_id            = local.cache_policy_caching_optimized
-    response_headers_policy_id = local.response_headers_cors_and_security
+    response_headers_policy_id = var.version_json_headers_policy_id
   }
 
   # The backend: never cached; all methods; no viewer-request function, so no
