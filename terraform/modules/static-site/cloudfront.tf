@@ -20,8 +20,12 @@ locals {
   origin_id = "s3-${var.name}"
 
   # AWS managed policies.
-  cache_policy_caching_optimized    = "658327ea-f89d-4fab-a63d-7e88639e58f6"
-  response_headers_security_headers = "67f7725c-6f97-4210-82d7-5512b31e9d03"
+  cache_policy_caching_optimized        = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+  response_headers_security_headers     = "67f7725c-6f97-4210-82d7-5512b31e9d03"
+  cache_policy_caching_disabled         = "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+  origin_request_all_viewer_except_host = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
+
+  api_origin_id = "api-${var.name}"
 }
 
 resource "aws_cloudfront_distribution" "site" {
@@ -42,6 +46,27 @@ resource "aws_cloudfront_distribution" "site" {
     origin_access_control_id = aws_cloudfront_origin_access_control.site.id
   }
 
+  dynamic "origin" {
+    for_each = var.api_domain_name != "" ? [var.api_domain_name] : []
+
+    content {
+      origin_id   = local.api_origin_id
+      domain_name = origin.value
+
+      custom_header {
+        name  = "x-origin-verify"
+        value = var.api_origin_verify_secret
+      }
+
+      custom_origin_config {
+        http_port              = 80
+        https_port             = 443
+        origin_protocol_policy = "https-only"
+        origin_ssl_protocols   = ["TLSv1.2"]
+      }
+    }
+  }
+
   default_cache_behavior {
     target_origin_id           = local.origin_id
     viewer_protocol_policy     = "redirect-to-https"
@@ -54,6 +79,37 @@ resource "aws_cloudfront_distribution" "site" {
     function_association {
       event_type   = "viewer-request"
       function_arn = aws_cloudfront_function.viewer_request.arn
+    }
+  }
+
+  # version.json (commit and deploy time) can be read from any site, so the
+  # dashboard on www can show every site's.
+  ordered_cache_behavior {
+    path_pattern               = "/version.json"
+    target_origin_id           = local.origin_id
+    viewer_protocol_policy     = "redirect-to-https"
+    allowed_methods            = ["GET", "HEAD", "OPTIONS"]
+    cached_methods             = ["GET", "HEAD"]
+    compress                   = true
+    cache_policy_id            = local.cache_policy_caching_optimized
+    response_headers_policy_id = var.version_json_headers_policy_id
+  }
+
+  # The backend: never cached; all methods; no viewer-request function, so no
+  # trailing-slash redirects.
+  dynamic "ordered_cache_behavior" {
+    for_each = var.api_domain_name != "" ? [var.api_path_pattern] : []
+
+    content {
+      path_pattern               = ordered_cache_behavior.value
+      target_origin_id           = local.api_origin_id
+      viewer_protocol_policy     = "https-only"
+      allowed_methods            = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+      cached_methods             = ["GET", "HEAD"]
+      compress                   = true
+      cache_policy_id            = local.cache_policy_caching_disabled
+      origin_request_policy_id   = local.origin_request_all_viewer_except_host
+      response_headers_policy_id = local.response_headers_security_headers
     }
   }
 

@@ -58,3 +58,26 @@ variable "subdomain_cname" {
   type        = bool
   default     = false
 }
+
+variable "api_domain_name" {
+  description = "Host of an HTTPS backend (e.g. a Lambda function URL) served at api_path_pattern. Empty: none."
+  type        = string
+  default     = ""
+}
+
+variable "api_path_pattern" {
+  type    = string
+  default = "/api/*"
+}
+
+variable "api_origin_verify_secret" {
+  description = "Sent to the backend as x-origin-verify, so it can refuse requests that skip CloudFront."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "version_json_headers_policy_id" {
+  description = "Response headers policy for /version.json, with the CORS header the dashboard needs."
+  type        = string
+}

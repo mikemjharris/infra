@@ -121,6 +121,20 @@ resource "aws_cloudfront_distribution" "site" {
     }
   }
 
+  # version.json (commit and deploy time) can be read from any site, so the
+  # dashboard on www can show every site's.
+  ordered_cache_behavior {
+    path_pattern               = "/version.json"
+    target_origin_id           = local.origin_id
+    viewer_protocol_policy     = "redirect-to-https"
+    allowed_methods            = ["GET", "HEAD", "OPTIONS"]
+    cached_methods             = ["GET", "HEAD"]
+    compress                   = true
+    cache_policy_id            = aws_cloudfront_cache_policy.pages.id
+    origin_request_policy_id   = local.origin_request_all_viewer_except_host
+    response_headers_policy_id = var.version_json_headers_policy_id
+  }
+
   restrictions {
     geo_restriction {
       restriction_type = "none"

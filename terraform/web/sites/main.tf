@@ -28,6 +28,8 @@ module "www" {
 
   github_repo              = "mikemjharris/personal-website"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
+
+  version_json_headers_policy_id = aws_cloudfront_response_headers_policy.version_json.id
 }
 
 # books.mikemjharris.com: a static React app that reads a published Google
@@ -50,10 +52,12 @@ module "books" {
 
   github_repo              = "mikemjharris/books"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
+
+  version_json_headers_policy_id = aws_cloudfront_response_headers_policy.version_json.id
 }
 
-# snowman.mikemjharris.com: the three.js snowball game, static, high scores
-# kept in the player's browser.
+# snowman.mikemjharris.com: the three.js snowball game, static, with a shared
+# high-score table.
 module "snowman" {
   source = "../../modules/static-site"
   providers = {
@@ -66,12 +70,19 @@ module "snowman" {
   zone_id      = data.aws_route53_zone.main.zone_id
   bucket_name  = "mikemjharris-snowman-${var.web_account_id}"
 
+  # The shared high-score table (snowman-scores.tf) at /api/scores.
+  api_domain_name          = local.snowman_scores_host
+  api_path_pattern         = "/api/*"
+  api_origin_verify_secret = random_password.snowman_scores_origin_verify.result
+
   # Cut over from the droplet: the alias records replace web/dns's A record
   # in place.
   serve_dns = true
 
   github_repo              = "mikemjharris/threejs-snowman"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
+
+  version_json_headers_policy_id = aws_cloudfront_response_headers_policy.version_json.id
 }
 
 # animated-message.mikemjharris.com: the SVG animated message, static. It had
@@ -92,6 +103,8 @@ module "animated_message" {
 
   github_repo              = "mikemjharris/svg-animation-with-node-server"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
+
+  version_json_headers_policy_id = aws_cloudfront_response_headers_policy.version_json.id
 }
 
 # blog.mikemjharris.com: the Express app from mikemjharris/blog on Lambda.
@@ -123,4 +136,6 @@ module "blog" {
 
   github_repo              = "mikemjharris/blog"
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
+
+  version_json_headers_policy_id = aws_cloudfront_response_headers_policy.version_json.id
 }
