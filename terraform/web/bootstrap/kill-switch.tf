@@ -59,6 +59,8 @@ data "archive_file" "kill_switch" {
   type        = "zip"
   source_file = "${path.module}/kill-switch/index.py"
   output_path = "${path.module}/.build/kill-switch.zip"
+  # Same zip, so same hash, wherever it is built (checkouts differ in modes).
+  output_file_mode = "0644"
 }
 
 data "aws_iam_policy_document" "lambda_trust" {
