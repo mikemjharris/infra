@@ -27,8 +27,8 @@ resource "aws_route53_record" "spf" {
   records = ["v=spf1 include:_spf.google.com ~all"]
 }
 
-# Monitoring only (p=none) until SPF and DKIM are confirmed working; then
-# tighten to quarantine.
+# SPF and DKIM both pass for mail sent through Google Workspace (checked
+# 2026-11-07), so mail that fails them goes to spam.
 resource "aws_route53_record" "dmarc" {
   zone_id = aws_route53_zone.main.zone_id
   name    = "_dmarc.${var.domain}"
@@ -36,7 +36,7 @@ resource "aws_route53_record" "dmarc" {
   ttl     = 3600
   records = [join("; ", compact([
     "v=DMARC1",
-    "p=none",
+    "p=quarantine",
     var.dmarc_report_email != "" ? "rua=mailto:${var.dmarc_report_email}" : "",
   ]))]
 }
