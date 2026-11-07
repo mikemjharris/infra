@@ -5,6 +5,13 @@ locals {
   enabled = var.image_uri != ""
 }
 
+# Shared by CloudFront (sent as x-origin-verify) and the app
+# (ORIGIN_VERIFY_SECRET), which rejects requests without it.
+resource "random_password" "origin_verify" {
+  length  = 40
+  special = false
+}
+
 data "aws_iam_policy_document" "lambda_trust" {
   statement {
     actions = ["sts:AssumeRole"]
