@@ -43,7 +43,7 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
         run: |
           # In apply order.
-          all="web/bootstrap web/dns web/sites"
+          all="web/bootstrap web/dns web/sites web/backups"
           case "$EVENT" in
             pull_request) changed=$(git diff --name-only "$BASE_SHA" HEAD) ;;
             push)
@@ -170,7 +170,7 @@ jobs:
       group: terraform-apply
       cancel-in-progress: false
     strategy:
-      max-parallel: 1 # bootstrap, then dns, then sites
+      max-parallel: 1 # bootstrap, then dns, then sites, then backups
       matrix:
         layer: ${{ fromJSON(needs.layers.outputs.layers) }}
     defaults:
