@@ -21,3 +21,7 @@ output "animated_message" {
 output "dashboard_deploy_role_arn" {
   value = aws_iam_role.dashboard_deploy.arn
 }
+
+output "personal" {
+  value = module.personal
+}

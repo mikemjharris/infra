@@ -18,3 +18,8 @@ output "cloudfront_domain" {
 output "deploy_role_arn" {
   value = try(aws_iam_role.deploy[0].arn, null)
 }
+
+output "function_role_name" {
+  description = "The function's IAM role, for granting it access to other resources (e.g. a table)."
+  value       = aws_iam_role.function.name
+}
