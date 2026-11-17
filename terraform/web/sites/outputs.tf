@@ -25,3 +25,7 @@ output "dashboard_deploy_role_arn" {
 output "personal" {
   value = module.personal
 }
+
+output "personal_media_bucket" {
+  value = aws_s3_bucket.personal_media.bucket
+}
