@@ -9,9 +9,15 @@
 #   aws ssm put-parameter --profile web --type String --name /personal/google-client-id --value '....apps.googleusercontent.com'
 # The client ID is a Google OAuth "Web application" client whose authorised
 # JavaScript origin is https://personal.mikemjharris.com.
-# Also by hand: the Telegram bot token (the app downloads photos and voice notes
-# sent to the bot), as a SecureString the function reads at run time:
+# Also by hand, as SecureStrings the function reads at run time (so they're in
+# neither Terraform state nor the function's settings):
 #   aws ssm put-parameter --profile web --type SecureString --name /personal/telegram-bot-token --value '...'
+#   aws ssm put-parameter --profile web --type SecureString --name /personal/session-secret --value "$(openssl rand -base64 48)"
+#
+# The data (table items, media objects) can be read and written only by the
+# function and by the account's SSO administrators: the resource policies below
+# deny everyone else, including the CI roles, which manage the resources but
+# have no reason to see what's in them.
 
 data "aws_ssm_parameter" "personal_allowed_emails" {
   name = "/personal/allowed-emails"
@@ -21,10 +27,13 @@ data "aws_ssm_parameter" "personal_google_client_id" {
   name = "/personal/google-client-id"
 }
 
-# Signs the app's session cookies.
-resource "random_password" "personal_session" {
-  length  = 48
-  special = false
+locals {
+  # Who may touch the data itself: the site's function, and SSO administrators (for one-off
+  # maintenance such as the initial data copy).
+  personal_data_principals = [
+    "arn:aws:iam::${var.web_account_id}:role/personal-function",
+    "arn:aws:iam::${var.web_account_id}:role/aws-reserved/sso.amazonaws.com/*/AWSReservedSSO_AdministratorAccess_*",
+  ]
 }
 
 resource "aws_dynamodb_table" "personal" {
@@ -94,6 +103,46 @@ resource "aws_s3_bucket_versioning" "personal_media" {
   }
 }
 
+data "aws_iam_policy_document" "personal_media" {
+  statement {
+    sid       = "OnlyTheSiteAndAdmins"
+    effect    = "Deny"
+    actions   = ["s3:GetObject", "s3:GetObjectVersion", "s3:PutObject", "s3:DeleteObject", "s3:DeleteObjectVersion", "s3:RestoreObject"]
+    resources = ["${aws_s3_bucket.personal_media.arn}/*"]
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    condition {
+      test     = "ArnNotLike"
+      variable = "aws:PrincipalArn"
+      values   = local.personal_data_principals
+    }
+  }
+
+  statement {
+    sid       = "HttpsOnly"
+    effect    = "Deny"
+    actions   = ["s3:*"]
+    resources = [aws_s3_bucket.personal_media.arn, "${aws_s3_bucket.personal_media.arn}/*"]
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "personal_media" {
+  bucket     = aws_s3_bucket.personal_media.id
+  policy     = data.aws_iam_policy_document.personal_media.json
+  depends_on = [aws_s3_bucket_public_access_block.personal_media]
+}
+
 resource "aws_s3_bucket_lifecycle_configuration" "personal_media" {
   bucket = aws_s3_bucket.personal_media.id
   rule {
@@ -105,6 +154,34 @@ resource "aws_s3_bucket_lifecycle_configuration" "personal_media" {
     }
   }
   depends_on = [aws_s3_bucket_versioning.personal_media]
+}
+
+data "aws_iam_policy_document" "personal_table_access" {
+  statement {
+    sid    = "OnlyTheSiteAndAdmins"
+    effect = "Deny"
+    actions = [
+      "dynamodb:GetItem", "dynamodb:BatchGetItem", "dynamodb:Query", "dynamodb:Scan",
+      "dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:DeleteItem", "dynamodb:BatchWriteItem",
+      "dynamodb:PartiQLSelect", "dynamodb:PartiQLInsert", "dynamodb:PartiQLUpdate", "dynamodb:PartiQLDelete",
+      "dynamodb:ExportTableToPointInTime",
+    ]
+    resources = [aws_dynamodb_table.personal.arn]
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    condition {
+      test     = "ArnNotLike"
+      variable = "aws:PrincipalArn"
+      values   = local.personal_data_principals
+    }
+  }
+}
+
+resource "aws_dynamodb_resource_policy" "personal" {
+  resource_arn = aws_dynamodb_table.personal.arn
+  policy       = data.aws_iam_policy_document.personal_table_access.json
 }
 
 module "personal" {
@@ -126,12 +203,12 @@ module "personal" {
   timeout_seconds = 30
 
   environment = {
-    TABLE            = aws_dynamodb_table.personal.name
-    PUBLIC_ORIGIN    = "https://personal.${var.domain}"
-    ALLOWED_EMAILS   = data.aws_ssm_parameter.personal_allowed_emails.value
-    GOOGLE_CLIENT_ID = data.aws_ssm_parameter.personal_google_client_id.value
-    SESSION_SECRET   = random_password.personal_session.result
-    MEDIA_BUCKET     = aws_s3_bucket.personal_media.bucket
+    TABLE                = aws_dynamodb_table.personal.name
+    PUBLIC_ORIGIN        = "https://personal.${var.domain}"
+    ALLOWED_EMAILS       = data.aws_ssm_parameter.personal_allowed_emails.value
+    GOOGLE_CLIENT_ID     = data.aws_ssm_parameter.personal_google_client_id.value
+    SESSION_SECRET_PARAM = "/personal/session-secret"
+    MEDIA_BUCKET         = aws_s3_bucket.personal_media.bucket
     # Read at run time, so the token never sits in Terraform state or plans.
     TELEGRAM_TOKEN_PARAM = "/personal/telegram-bot-token"
   }
@@ -165,8 +242,11 @@ data "aws_iam_policy_document" "personal_table" {
   }
 
   statement {
-    actions   = ["ssm:GetParameter"]
-    resources = ["arn:aws:ssm:*:${var.web_account_id}:parameter/personal/telegram-bot-token"]
+    actions = ["ssm:GetParameter"]
+    resources = [
+      "arn:aws:ssm:*:${var.web_account_id}:parameter/personal/telegram-bot-token",
+      "arn:aws:ssm:*:${var.web_account_id}:parameter/personal/session-secret",
+    ]
   }
 
   # The SecureString's default aws/ssm key, only when SSM decrypts on the function's behalf.
