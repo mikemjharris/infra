@@ -13,3 +13,9 @@ variable "personal_github_repo" {
   type        = string
   default     = "mikemjharris/personal"
 }
+
+variable "personal_github_subject" {
+  description = "Immutable OIDC subject prefix of personal_github_repo (owner and repo ids from the GitHub API)."
+  type        = string
+  default     = "repo:mikemjharris@1722189/personal@1458813339"
+}
