@@ -1,6 +1,11 @@
 # Lets the site's own repo push images, point the function at a new image and
 # clear the cache, and nothing else, from GitHub Actions on its main branch (github_branches).
 
+locals {
+  # GitHub's immutable subject (repo:owner@id/repo@id) when the repo uses it, else repo:owner/repo.
+  github_subject = var.github_subject != "" ? var.github_subject : "repo:${var.github_repo}"
+}
+
 data "aws_iam_policy_document" "deploy_trust" {
   count = var.github_repo != "" ? 1 : 0
 
@@ -21,7 +26,7 @@ data "aws_iam_policy_document" "deploy_trust" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = [for b in var.github_branches : "repo:${var.github_repo}:ref:refs/heads/${b}"]
+      values   = [for b in var.github_branches : "${local.github_subject}:ref:refs/heads/${b}"]
     }
   }
 }

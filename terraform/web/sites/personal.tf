@@ -225,6 +225,7 @@ module "personal" {
   serve_dns = true
 
   github_repo              = var.personal_github_repo
+  github_subject           = var.personal_github_subject
   github_oidc_provider_arn = data.aws_iam_openid_connect_provider.github.arn
 
   version_json_headers_policy_id = aws_cloudfront_response_headers_policy.version_json.id

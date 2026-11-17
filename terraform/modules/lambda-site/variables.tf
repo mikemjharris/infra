@@ -73,6 +73,12 @@ variable "github_branches" {
   default     = ["main"]
 }
 
+variable "github_subject" {
+  description = "OIDC subject prefix for github_repo when it uses GitHub's immutable form (repo:owner@id/repo@id). Empty: repo:owner/repo."
+  type        = string
+  default     = ""
+}
+
 variable "github_oidc_provider_arn" {
   type    = string
   default = ""
