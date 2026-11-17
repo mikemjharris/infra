@@ -195,9 +195,9 @@ module "personal" {
   domain_names = ["personal.${var.domain}"]
   zone_id      = data.aws_route53_zone.main.zone_id
 
-  # Empty until the first image is pushed by hand to the repository this
-  # creates; later deploys come from the app's repo and Terraform ignores them.
-  image_uri = ""
+  # The first image, pushed by hand. Later deploys come from the app's repo
+  # and Terraform ignores them.
+  image_uri = "702167621683.dkr.ecr.eu-west-2.amazonaws.com/personal:a505ce0dac03fcdc13465a57b51995c9b88ab978"
 
   memory_mb       = 512
   timeout_seconds = 30
