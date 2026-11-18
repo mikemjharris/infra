@@ -219,7 +219,7 @@ module "personal" {
   # Never cached: the API and every section's pages, which need a session.
   # Only the sign-in page and its script and styles use the default cache.
   # A new section adds its folder here.
-  uncached_paths = ["/api/*", "/health/*"]
+  uncached_paths = ["/api/*", "/health/*", "/e2e/*"]
 
   # A new name: nothing to overwrite.
   serve_dns = true
@@ -239,7 +239,18 @@ data "aws_iam_policy_document" "personal_table" {
 
   statement {
     actions   = ["s3:GetObject", "s3:PutObject"]
-    resources = ["${aws_s3_bucket.personal_media.arn}/media/*"]
+    resources = ["${aws_s3_bucket.personal_media.arn}/media/*", "${aws_s3_bucket.personal_media.arn}/e2e/*"]
+  }
+
+  # The /e2e/ section lists its walkthroughs (e2e/<app>/<feature>/<run>/).
+  statement {
+    actions   = ["s3:ListBucket"]
+    resources = [aws_s3_bucket.personal_media.arn]
+    condition {
+      test     = "StringLike"
+      variable = "s3:prefix"
+      values   = ["e2e/*"]
+    }
   }
 
   statement {
