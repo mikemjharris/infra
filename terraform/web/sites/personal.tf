@@ -12,6 +12,7 @@
 # Also by hand, as SecureStrings the function reads at run time (so they're in
 # neither Terraform state nor the function's settings):
 #   aws ssm put-parameter --profile web --type SecureString --name /personal/telegram-bot-token --value '...'
+#   aws ssm put-parameter --profile web --type SecureString --name /personal/german-bot-token --value '...'
 #   aws ssm put-parameter --profile web --type SecureString --name /personal/session-secret --value "$(openssl rand -base64 48)"
 #
 # The data (table items, media objects) can be read and written only by the
@@ -211,6 +212,7 @@ module "personal" {
     MEDIA_BUCKET         = aws_s3_bucket.personal_media.bucket
     # Read at run time, so the token never sits in Terraform state or plans.
     TELEGRAM_TOKEN_PARAM = "/personal/telegram-bot-token"
+    GERMAN_TOKEN_PARAM   = "/personal/german-bot-token"
   }
 
   # A new site, so CloudFront sends the header from the start.
@@ -219,7 +221,7 @@ module "personal" {
   # Never cached: the API and every section's pages, which need a session.
   # Only the sign-in page and its script and styles use the default cache.
   # A new section adds its folder here.
-  uncached_paths = ["/api/*", "/health/*", "/e2e/*"]
+  uncached_paths = ["/api/*", "/health/*", "/e2e/*", "/german/*"]
 
   # A new name: nothing to overwrite.
   serve_dns = true
@@ -257,6 +259,7 @@ data "aws_iam_policy_document" "personal_table" {
     actions = ["ssm:GetParameter"]
     resources = [
       "arn:aws:ssm:*:${var.web_account_id}:parameter/personal/telegram-bot-token",
+      "arn:aws:ssm:*:${var.web_account_id}:parameter/personal/german-bot-token",
       "arn:aws:ssm:*:${var.web_account_id}:parameter/personal/session-secret",
     ]
   }
